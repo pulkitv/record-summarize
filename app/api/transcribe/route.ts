@@ -81,7 +81,7 @@ async function transcribeAudio(filePath: string): Promise<string> {
     const response = await openaiClient.audio.transcriptions.create({
       file: fs.createReadStream(filePath),
       model: "whisper-1",
-      language: "en", // 👈 Forces English transcription
+      // language: "en", // 👈 Forces English transcription
     });
 
     return response.text;
