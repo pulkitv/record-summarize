@@ -45,7 +45,7 @@ export default function LoginPage() {
   const handleSignIn = async () => {
     try {
       setIsLoading(true)
-      await signIn("google", { callbackUrl: "/dashboard" })
+      await signIn("google", { callbackUrl: "/record" })
     } catch (error) {
       console.error("Sign in error:", error)
       setIsLoading(false)
@@ -80,7 +80,10 @@ export default function LoginPage() {
           </Button>
 
           <div className="text-center text-sm text-muted-foreground mt-4">
-            By signing in, you agree to our Terms of Service and Privacy Policy.
+          By signing in, you agree to our{" "}
+          <a href="/terms.html"  target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">Terms of Service</a>{" "}
+          and{" "}
+          <a href="/privacy-policy.html"  target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">Privacy Policy</a>.
           </div>
         </CardContent>
       </Card>

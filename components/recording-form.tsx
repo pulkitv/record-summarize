@@ -280,8 +280,8 @@ export function RecordingForm({ user }: { user: User }) {
       {isRecording && (
         <div className="bg-gray-50 p-4 rounded-lg border">
           <div className="text-center mb-2">
-            <div className="text-3xl font-mono font-bold">{formatTime(recordingTime)}</div>
-            <div className="text-sm text-muted-foreground mt-1">
+          <div className="text-3xl font-mono font-bold text-black">{formatTime(recordingTime)}</div>
+          <div className="text-sm text-muted-foreground mt-1">
               {isPaused ? "Recording paused" : "Recording in progress..."}
             </div>
           </div>

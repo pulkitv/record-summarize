@@ -10,28 +10,36 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 
 // Mock data for demonstration
-const MOCK_RECORDINGS = [
-  {
-    id: "rec_1",
-    name: "Weekly Team Standup",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    duration: "15:23",
-    transcribed: true,
-  },
-  {
-    id: "rec_2",
-    name: "Product Planning",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    duration: "45:12",
-    transcribed: true,
-  },
-  {
-    id: "rec_3",
-    name: "Client Meeting - ABC Corp",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-    duration: "32:40",
-    transcribed: false,
-  },
+interface Recording {
+  id: string;
+  name: string;
+  date: Date;
+  duration: string;
+  transcribed: boolean;
+}
+
+const MOCK_RECORDINGS: Recording[] = [
+  // {
+  //   id: "rec_1",
+  //   name: "Weekly Team Standup",
+  //   date: new Date(Date.now() - 1000 * 60 * 60 * 2),
+  //   duration: "15:23",
+  //   transcribed: true,
+  // },
+  // {
+  //   id: "rec_2",
+  //   name: "Product Planning",
+  //   date: new Date(Date.now() - 1000 * 60 * 60 * 24),
+  //   duration: "45:12",
+  //   transcribed: true,
+  // },
+  // {
+  //   id: "rec_3",
+  //   name: "Client Meeting - ABC Corp",
+  //   date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
+  //   duration: "32:40",
+  //   transcribed: false,
+  // },
 ];
 
 export default async function DashboardPage() {
