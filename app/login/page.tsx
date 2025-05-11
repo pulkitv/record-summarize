@@ -63,7 +63,7 @@ export default function LoginPage() {
               <Mic className="h-10 w-10 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Meeting Recorder</CardTitle>
+          <CardTitle className="text-2xl font-bold">RecapAI - Meeting Recorder</CardTitle>
           <CardDescription className="text-center">Record, transcribe, and summarize your meetings</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
