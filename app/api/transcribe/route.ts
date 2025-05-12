@@ -80,52 +80,52 @@ export async function POST(request: NextRequest) {
 // This is a workaround for the OpenAI API, which currently does not support webm files directly.
 // The OpenAI API requires audio files to be in mp3 format for transcription.
 
-import ffmpeg from "fluent-ffmpeg"
-import ffmpegInstaller from "@ffmpeg-installer/ffmpeg"
-ffmpeg.setFfmpegPath(ffmpegInstaller.path)
-
-
-async function transcribeAudio(filePath: string): Promise<string> {
-  const mp3Path = filePath.replace(/\.webm$/, ".mp3")
-
-  try {
-    // Convert webm to mp3
-    await new Promise((resolve, reject) => {
-      ffmpeg(filePath)
-        .output(mp3Path)
-        .on("end", resolve)
-        .on("error", reject)
-        .run()
-    })
-
-    // Transcribe the converted mp3
-    const response = await openaiClient.audio.transcriptions.create({
-      file: fs.createReadStream(mp3Path),
-      model: "whisper-1",
-    })
-
-    return response.text
-  } catch (error) {
-    console.error("Error during mobile-safe transcription:", error)
-    return "Error transcribing the meeting audio. Please try again later."
-  }
-}
+// import ffmpeg from "fluent-ffmpeg"
+// import ffmpegInstaller from "@ffmpeg-installer/ffmpeg"
+// ffmpeg.setFfmpegPath(ffmpegInstaller.path)
 
 
 // async function transcribeAudio(filePath: string): Promise<string> {
-//   try {
-//     const response = await openaiClient.audio.transcriptions.create({
-//       file: fs.createReadStream(filePath),
-//       model: "whisper-1",
-//       // language: "en", // 👈 Forces English transcription
-//     });
+//   const mp3Path = filePath.replace(/\.webm$/, ".mp3")
 
-//     return response.text;
+//   try {
+//     // Convert webm to mp3
+//     await new Promise((resolve, reject) => {
+//       ffmpeg(filePath)
+//         .output(mp3Path)
+//         .on("end", resolve)
+//         .on("error", reject)
+//         .run()
+//     })
+
+//     // Transcribe the converted mp3
+//     const response = await openaiClient.audio.transcriptions.create({
+//       file: fs.createReadStream(mp3Path),
+//       model: "whisper-1",
+//     })
+
+//     return response.text
 //   } catch (error) {
-//     console.error("Error during real audio transcription:", error);
-//     return "Error transcribing the meeting audio. Please try again later.";
+//     console.error("Error during mobile-safe transcription:", error)
+//     return "Error transcribing the meeting audio. Please try again later."
 //   }
 // }
+
+
+async function transcribeAudio(filePath: string): Promise<string> {
+  try {
+    const response = await openaiClient.audio.transcriptions.create({
+      file: fs.createReadStream(filePath),
+      model: "whisper-1",
+      // language: "en", // 👈 Forces English transcription
+    });
+
+    return response.text;
+  } catch (error) {
+    console.error("Error during real audio transcription:", error);
+    return "Error transcribing the meeting audio. Please try again later.";
+  }
+}
 
 
 async function generateSummary(transcription: string): Promise<string> {
