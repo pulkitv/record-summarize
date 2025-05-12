@@ -265,33 +265,114 @@ export function RecordingForm({ user }: { user: User }) {
     try {
       setIsDownloading(true)
       
-      // Create a download link for the webm file
-      const url = window.URL.createObjectURL(audioBlob)
-      const a = document.createElement("a")
-      a.style.display = "none"
-      a.href = url
-      a.download = `${meetingName}.webm`
-      document.body.appendChild(a)
-      a.click()
+      // Detect iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
       
-      // Clean up
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-      
-      setDownloadClicked(true)
-      toast({ 
-        title: "Download started", 
-        description: `Your recording has been downloaded as ${meetingName}.webm` 
-      })
+      if (isIOS) {
+        // For iOS, create a data URL and open it in a new window
+        // This presents the file but doesn't navigate away from the current page
+        const reader = new FileReader()
+        
+        reader.onload = () => {
+          // Create a temporary link to download
+          const a = document.createElement("a")
+          a.style.display = "none"
+          a.href = reader.result as string
+          a.download = `${meetingName}.webm`
+          
+          // For iOS, we'll use a different approach to prevent navigation
+          if (isIOS) {
+            // Create a temporary iframe to load the file
+            const iframe = document.createElement('iframe')
+            iframe.style.display = 'none'
+            document.body.appendChild(iframe)
+            
+            try {
+              // Write the file data to the iframe
+              const iframeDoc = iframe.contentWindow?.document
+              if (iframeDoc) {
+                iframeDoc.open()
+                iframeDoc.write(`
+                  <html>
+                    <body>
+                      <a id="downloadLink" href="${reader.result}" download="${meetingName}.webm">Download</a>
+                      <script>
+                        // Auto-click the download link
+                        document.getElementById('downloadLink').click();
+                        // Send message back to parent when done
+                        window.parent.postMessage('download-complete', '*');
+                      </script>
+                    </body>
+                  </html>
+                `)
+                iframeDoc.close()
+              }
+            } catch (e) {
+              console.error("Error with iframe approach:", e)
+              // Fallback to direct data URL for iOS
+              window.open(reader.result as string)
+            } finally {
+              // Clean up the iframe after a delay
+              setTimeout(() => {
+                document.body.removeChild(iframe)
+              }, 1000)
+            }
+          } else {
+            // Standard download for non-iOS
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+          }
+          
+          setDownloadClicked(true)
+          setIsDownloading(false)
+          toast({ 
+            title: "Download initiated", 
+            description: `Your recording '${meetingName}.webm' is being saved` 
+          })
+        }
+        
+        reader.onerror = () => {
+          console.error("FileReader error:", reader.error)
+          setIsDownloading(false)
+          toast({ 
+            title: "Download failed", 
+            description: "An error occurred during download", 
+            variant: "destructive" 
+          })
+        }
+        
+        // Read the audio blob as data URL
+        reader.readAsDataURL(audioBlob)
+      } else {
+        // Standard download method for non-iOS devices
+        const url = window.URL.createObjectURL(audioBlob)
+        const a = document.createElement("a")
+        a.style.display = "none"
+        a.href = url
+        a.download = `${meetingName}.webm`
+        document.body.appendChild(a)
+        a.click()
+        
+        // Clean up
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        
+        setDownloadClicked(true)
+        setIsDownloading(false)
+        toast({ 
+          title: "Download started", 
+          description: `Your recording has been downloaded as ${meetingName}.webm` 
+        })
+      }
     } catch (error) {
       console.error("Download error:", error)
+      setIsDownloading(false)
       toast({ 
         title: "Download failed", 
         description: "An error occurred during download", 
         variant: "destructive" 
       })
-    } finally {
-      setIsDownloading(false)
     }
   }
 
