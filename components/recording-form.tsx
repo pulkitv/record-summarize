@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress"
 import { CardFooter } from "./ui/card"
 
 // Import types from FFmpeg (will be dynamically imported at runtime)
-type FFmpeg = any; // We'll use 'any' until we load the actual type
+type FFmpeg = any;
 type ToBlobURL = (url: string, type: string) => Promise<string>;
 
 interface User {
@@ -41,6 +41,7 @@ export function RecordingForm({ user }: { user: User }) {
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const audioStreamRef = useRef<MediaStream | null>(null)
+  const audioElementRef = useRef<HTMLAudioElement | null>(null)
   
   // FFmpeg refs (only initialized in browser)
   const ffmpegRef = useRef<FFmpeg | null>(null)
@@ -260,8 +261,8 @@ export function RecordingForm({ user }: { user: User }) {
   }
   
   // Simulate download progress
-  const simulateDownloadProgress = (setDProgress: React.Dispatch<React.SetStateAction<number>>) => {
-    setDProgress(0);
+  const simulateDownloadProgress = () => {
+    setDownloadProgress(0);
     
     // Use a non-linear progress simulation to feel more realistic
     let progress = 0;
@@ -285,14 +286,21 @@ export function RecordingForm({ user }: { user: User }) {
         progress = 80 + (endStep / (totalSteps / 3)) * 20; // Last third goes from 80% to 100%
       }
       
-      setDProgress(Math.min(Math.round(progress), 99)); // Cap at 99% until complete
+      setDownloadProgress(Math.min(Math.round(progress), 99)); // Cap at 99% until complete
       
       if (step >= totalSteps) {
         clearInterval(interval);
         
         // Give a slight delay before showing 100% to make it feel more natural
         setTimeout(() => {
-          setDProgress(100);
+          setDownloadProgress(100);
+          
+          // Small delay at 100% before clearing
+          setTimeout(() => {
+            setDownloadProgress(0);
+            setIsDownloading(false);
+            setDownloadClicked(true);
+          }, 300);
         }, 200);
       }
     }, 100); // Update every 100ms for a total of ~2 seconds
@@ -300,97 +308,86 @@ export function RecordingForm({ user }: { user: User }) {
     return interval;
   };
   
-  // Helper method for iOS to create a playable and saveable data URL
-  const saveAsBase64ForIOS = () => {
+  // Hidden helper method for iOS download - creates audio element and triggers programmatic play
+  const handleIOSDownload = async () => {
     if (!audioBlob) return;
     
-    // Create a temporary storage for the blob data
-    const reader = new FileReader();
-    
-    // Simulate download progress
-    simulateDownloadProgress(setDownloadProgress);
-    
-    reader.onload = () => {
-      try {
-        setTimeout(() => {
-          setDownloadProgress(0);
-          setIsDownloading(false);
-        }, 300);
+    try {
+      // Create a reader to convert blob to data URL
+      const reader = new FileReader();
+      
+      reader.onload = () => {
+        // Create hidden audio element to play the audio
+        // This triggers a download in iOS Safari if the user taps the popup
+        const audioDataUrl = reader.result as string;
         
-        // Create or get the preview container
-        let previewContainer = document.getElementById('recording-preview-container');
-        if (!previewContainer) {
-          previewContainer = document.createElement('div');
-          previewContainer.id = 'recording-preview-container';
-          previewContainer.className = 'mt-6 p-4 border rounded-lg bg-gray-50';
-          document.querySelector('.space-y-6')?.appendChild(previewContainer);
+        // Create the blob as a new tab/window that can be saved on iOS
+        const newWindow = window.open();
+        if (!newWindow) {
+          throw new Error("Could not open new window for download");
         }
         
-        // Clear previous content
-        previewContainer.innerHTML = '';
-        
-        // Create header and instructions
-        previewContainer.innerHTML = `
-          <h3 class="font-medium text-gray-900 mb-2">Recording Preview</h3>
-          <p class="text-sm text-gray-500 mb-3">Listen to your recording and save it:</p>
-        `;
-        
-        // Create an audio element for playback
-        const audioElement = document.createElement('audio');
-        audioElement.controls = true;
-        audioElement.src = reader.result as string;
-        audioElement.style.width = "100%";
-        audioElement.className = "mt-2";
-        previewContainer.appendChild(audioElement);
-        
-        // Add a line break
-        previewContainer.appendChild(document.createElement('br'));
-        
-        // Create download link with data URI
-        const downloadLink = document.createElement('a');
-        downloadLink.href = reader.result as string;
-        downloadLink.download = `${meetingName}.webm`;
-        downloadLink.className = "mt-3 inline-block px-4 py-2 bg-primary text-black rounded-md text-sm font-medium";
-        downloadLink.innerText = "Save Recording";
-        previewContainer.appendChild(downloadLink);
-        
-        // Add iOS-specific instructions
-        const iosInstructions = document.createElement('p');
-        iosInstructions.className = 'text-xs text-gray-500 mt-2';
-        iosInstructions.innerHTML = 'On iOS: Click on the button above to Download the recording."';
-        previewContainer.appendChild(iosInstructions);
-        
-        // Update UI state and show toast
-        toast({ 
-          title: "Recording ready", 
-          description: "Save Recording" 
-        });
-        setDownloadClicked(true);
-      } catch (error) {
-        console.error("Error creating preview:", error);
+        // Give the window a moment to open
+        setTimeout(() => {
+          newWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>${meetingName} - Recording</title>
+              <style>
+                body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; text-align: center; }
+                audio { width: 100%; max-width: 500px; margin: 20px 0; }
+                .instructions { color: #555; font-size: 14px; margin: 20px 0; }
+                h1 { font-size: 18px; }
+              </style>
+            </head>
+            <body>
+              <h1>Your Recording: ${meetingName}</h1>
+              <audio controls src="${audioDataUrl}" autoplay></audio>
+              <p class="instructions">
+                To save: Tap and hold on the audio player, then select "Download" or "Save to Files"
+              </p>
+            </body>
+            </html>
+          `);
+          
+          // Once the page is built, complete the download simulation
+          setDownloadProgress(100);
+          
+          // Small delay at 100% before clearing
+          setTimeout(() => {
+            setDownloadProgress(0);
+            setIsDownloading(false);
+            setDownloadClicked(true);
+          }, 300);
+        }, 500);
+      };
+      
+      reader.onerror = () => {
+        console.error("FileReader error:", reader.error);
         setDownloadProgress(0);
         setIsDownloading(false);
         toast({ 
-          title: "Preview error", 
-          description: "Unable to create recording preview", 
+          title: "Processing failed", 
+          description: "Unable to process recording", 
           variant: "destructive" 
         });
-      }
-    };
-    
-    reader.onerror = () => {
-      console.error("FileReader error:", reader.error);
+      };
+      
+      // Read the audio blob as data URL
+      reader.readAsDataURL(audioBlob);
+      
+    } catch (error) {
+      console.error("iOS download error:", error);
       setDownloadProgress(0);
       setIsDownloading(false);
       toast({ 
-        title: "Processing failed", 
-        description: "Unable to process recording", 
+        title: "Download failed", 
+        description: "Could not prepare file for download", 
         variant: "destructive" 
       });
-    };
-    
-    // Read the audio blob as data URL
-    reader.readAsDataURL(audioBlob);
+    }
   };
   
   // Download or share recording
@@ -399,14 +396,22 @@ export function RecordingForm({ user }: { user: User }) {
     
     try {
       setIsDownloading(true);
+      simulateDownloadProgress();
       
       // Check if iOS
       const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && 
                          (/WebKit/.test(navigator.userAgent) || /AppleWebKit/.test(navigator.userAgent));
       
       if (isIOSDevice) {
-        console.log("iOS device detected, using data URL method");
-        saveAsBase64ForIOS();
+        console.log("iOS device detected, using iOS-specific download method");
+        
+        // Use iOS-specific method that opens in a new window
+        await handleIOSDownload();
+        
+        toast({ 
+          title: "Recording ready", 
+          description: "Follow instructions in the new window to save your recording" 
+        });
       } else {
         console.log("Using standard download method");
         // Standard download method for non-iOS devices
@@ -427,18 +432,16 @@ export function RecordingForm({ user }: { user: User }) {
           title: "Download started", 
           description: `Your recording has been downloaded as ${meetingName}.webm` 
         });
-        
-        setDownloadClicked(true);
-        setIsDownloading(false);
       }
     } catch (error) {
       console.error("Download error:", error);
+      setDownloadProgress(0);
+      setIsDownloading(false);
       toast({ 
         title: "Download failed", 
         description: "An error occurred during download", 
         variant: "destructive" 
       });
-      setIsDownloading(false);
     }
   };
   
@@ -488,10 +491,10 @@ export function RecordingForm({ user }: { user: User }) {
       
       const mp3Blob = await convertToMp3(audioBlob)
       
-      // toast({ 
-      //   title: "Conversion complete", 
-      //   description: "Your audio has been converted to MP3 format" 
-      // })
+      toast({ 
+        title: "Conversion complete", 
+        description: "Your audio has been converted to MP3 format" 
+      })
       
       // Create form data for API request
       const formData = new FormData()
@@ -500,10 +503,10 @@ export function RecordingForm({ user }: { user: User }) {
       formData.append("email", user.email)
       
       // Send to API
-      // toast({ 
-      //   title: "Processing", 
-      //   description: "Sending your recording for transcription and summarization..." 
-      // })
+      toast({ 
+        title: "Processing", 
+        description: "Sending your recording for transcription and summarization..." 
+      })
       
       const response = await fetch("/api/transcribe", { 
         method: "POST", 
@@ -625,9 +628,6 @@ export function RecordingForm({ user }: { user: User }) {
                 <Progress value={downloadProgress} className="h-2" />
               </div>
             )}
-
-            {/* Container for recording preview (populated by JavaScript) */}
-            <div id="recording-preview-container"></div>
 
             {/* Send email button */}
             <Button
