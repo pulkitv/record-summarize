@@ -350,20 +350,20 @@ export function RecordingForm({ user }: { user: User }) {
         const downloadLink = document.createElement('a');
         downloadLink.href = reader.result as string;
         downloadLink.download = `${meetingName}.webm`;
-        downloadLink.className = "mt-3 inline-block px-4 py-2 bg-primary text-white rounded-md text-sm font-medium";
-        downloadLink.innerText = "Save Recording (Tap and Hold)";
+        downloadLink.className = "mt-3 inline-block px-4 py-2 bg-primary text-black rounded-md text-sm font-medium";
+        downloadLink.innerText = "Save Recording";
         previewContainer.appendChild(downloadLink);
         
         // Add iOS-specific instructions
         const iosInstructions = document.createElement('p');
         iosInstructions.className = 'text-xs text-gray-500 mt-2';
-        iosInstructions.innerHTML = 'On iOS: Tap and hold on the audio player or button above, then select "Download" or "Save to Files"';
+        iosInstructions.innerHTML = 'On iOS: Click on the button above to Download the recording."';
         previewContainer.appendChild(iosInstructions);
         
         // Update UI state and show toast
         toast({ 
           title: "Recording ready", 
-          description: "Tap and hold on the audio player or button to save" 
+          description: "Save Recording" 
         });
         setDownloadClicked(true);
       } catch (error) {
@@ -488,10 +488,10 @@ export function RecordingForm({ user }: { user: User }) {
       
       const mp3Blob = await convertToMp3(audioBlob)
       
-      toast({ 
-        title: "Conversion complete", 
-        description: "Your audio has been converted to MP3 format" 
-      })
+      // toast({ 
+      //   title: "Conversion complete", 
+      //   description: "Your audio has been converted to MP3 format" 
+      // })
       
       // Create form data for API request
       const formData = new FormData()
@@ -500,10 +500,10 @@ export function RecordingForm({ user }: { user: User }) {
       formData.append("email", user.email)
       
       // Send to API
-      toast({ 
-        title: "Processing", 
-        description: "Sending your recording for transcription and summarization..." 
-      })
+      // toast({ 
+      //   title: "Processing", 
+      //   description: "Sending your recording for transcription and summarization..." 
+      // })
       
       const response = await fetch("/api/transcribe", { 
         method: "POST", 
